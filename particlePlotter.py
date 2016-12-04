@@ -53,11 +53,12 @@ df = pd.read_excel("E:\\Code\pythonPractice\\MSD\\file.xls")
 grouped = df[[' X1 (pixels)', ' Y1 (pixels)',' X2 (pixels)', ' Y2 (pixels)', ' Particle Size (nm)']].groupby(df['Particle ID'])
 counts = grouped.size() #Creates Series with sizes for each group
 validData = []
-lowestTime = 5000
+lowestTime = 1000
+msdRowLimit = 15
 dt = .04
 msdData = []
 for name, group in grouped:
-    if counts[name] > 20 and group.iloc[0][' Particle Size (nm)'] > 50:
+    if counts[name] > 100 and group.iloc[0][' Particle Size (nm)'] > 50:
         #Group passes -> Do things
         #print("Group %s is valid data" %name)
         validData.append({'id': "%s" %name, 'data': group})
@@ -73,18 +74,32 @@ for name, group in grouped:
     #else:
         #Discarded  Data
         #print("Group %s is INVALID data" %name)
-msdAvgs = pd.DataFrame(columns=['t', 'msdAvg'])
-for time in np.arange(0, lowestTime, dt):
+#msdAvgs = pd.DataFrame(columns=['t', 'msdAvg'])
+#for time in np.arange(0, lowestTime, dt):
+times = []
+avgs = []
+#For each time interval, calculate average MSD across all particles
+for index in range(0, msdRowLimit):
     sum = 0.0
     avg = 0.0
     for point in msdData:
-        step = time % .04
-        print(point['data']['msds'].head())
-        #step is off, due to mis-assigned indices (indices carried from initial import)
-        plus = point['data'].get_value(step, 'msds')
-        # sum += point.get('data')['msds'][step]
-    #avg = sum % len(msdData)
-    #msdAvgs.append({'t': time, 'msdAvg': avg})
+        #step = time % .04
+        #print(point['data'])
+        diff = point['data']['msds'].iloc[index]
+        sum = sum + diff
+
+    avg = sum/len(msdData)
+    time = index * dt
+    times.append(time)
+    avgs.append(avg)
+    print("Time: %s Avg: %s" %(time, avg))
+
+#msdAvgs = pd.Series(data=avgs, index=times)
+msdAvgs = pd.DataFrame(data=avgs, index=times, columns=["Avg MSDs"])
+print(msdAvgs)
+msdAvgs.plot(kind="line")
+
+    
         
         
     
