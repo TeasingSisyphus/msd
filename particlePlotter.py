@@ -11,7 +11,7 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn import datasets, linear_model
+from sklearn import datasets, linear_model, preprocessing, pipeline
 
 
 def msd_straight_forward(r):
@@ -40,6 +40,7 @@ def compute_msd(trajectory, t_step, coords=['x', 'y']):
 
     msds = pd.DataFrame({'msds': msds, 'tau': tau, 'msds_std': msds_std})
     return msds
+
 
 os.chdir("E:\Code\pythonPractice\MSD")
 dataDir = "E:\\Code\\pythonPractice\\MSD\\data\\"
@@ -108,11 +109,14 @@ for file in dataList:
     msdAvgs.reset_index(inplace=True)
     msdAvgs.columns = ["Delta Time in Seconds", "Avg MSD"]
     print(msdAvgs)
+    #Create Scatter Plot
     scatterPlot = msdAvgs.plot(kind="scatter", x="Delta Time in Seconds", y="Avg MSD", title="Average MSD across %s" %filePath)
     scatterPlot.set_xlabel("Delta Time in Seconds")
     scatterPlot.set_ylabel("Avg MSD")
     fig = scatterPlot.get_figure()
     fig.savefig("./output/scatterplots/MSD Graph of %s.png" %file)
+
+    #Format data for regression
     msdAvgs.columns = ['a','b']
     x = msdAvgs['a'].values
     y = msdAvgs['b'].values
@@ -121,12 +125,24 @@ for file in dataList:
     x = x.reshape(length,1)
     y= y.reshape(length,1)
 
+    #Calculate linear regression
     regr = linear_model.LinearRegression()
     fitXY = regr.fit(x,y)
     regPlot = plt.plot(x, regr.predict(x), color='blue',linewidth=2)
     regFig = scatterPlot.get_figure()
-    regFig.savefig("./output/regplots/Regression MSD Graph of %s.png" %file)
-        
+    regFig.savefig("./output/linRegs/Regression MSD Graph of %s.png" %file)
+    
+    folders = ["linRegs2", "quadRegs"]
+    #Calculate polynomial regression
+    for count, degree in enumerate([1, 2]):
+        plt.clf()
+        model = pipeline.make_pipeline(preprocessing.PolynomialFeatures(degree), linear_model.Ridge())
+        model.fit(x, y)
+        y_plot = model.predict(x)
+        plt.scatter(x, y_plot, color="navy")
+        plot = plt.plot(x, y_plot, label="AVG MSD %s Degree Reg" %degree, linewidth=2)
+        fig2 = plot[0].figure
+        fig2.savefig("./output/%s/%s degree Reg MSD %s.png" % (folders[count], degree, file))
         
     
 
