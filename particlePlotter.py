@@ -42,8 +42,8 @@ def compute_msd(trajectory, t_step, coords=['x', 'y']):
     return msds
 
 
-os.chdir("E:\Code\pythonPractice\MSD")
-dataDir = "E:\\Code\\pythonPractice\\MSD\\data\\"
+os.chdir("C:\\Users\\ashis\\Documents\\code\\msd\\")
+dataDir = "C:\\Users\\ashis\\Documents\\code\\msd\\data\\"
 dataList = os.listdir(dataDir)
 dataFileCount = len(dataList)
 
@@ -151,6 +151,7 @@ for file in dataList:
         model.fit(x, y)
         y_plot = model.predict(x)
         plt.scatter(x, y_plot, color="navy")
+<<<<<<< HEAD
         plot = plt.plot(x, y_plot, label="AVG MSD %s Degree Reg" %degree, linewidth=2)
         plt.xlabel("Time in Seconds")
         plt.ylabel("Avg MSD")        
@@ -159,6 +160,15 @@ for file in dataList:
         fig2.text(.18, .7, "r2 value: %s" %r2)
         fig2.suptitle("AVG MSD %s %sDegree Reg" %(sampleName, degree))
         fig2.savefig("./output/%s/%s degree Reg MSD %s.png" % (folders[count], degree, file))
+=======
+        plt.xlabel('delta t', fontsize=10)
+        plt.ylabel('avg MSD', fontsize=10)
+        
+        plot = plt.plot(x, y_plot, linewidth=2)
+        fig2 = plot[0].figure
+        fig2.suptitle('Avg MSD of %s_%s degReg'%(file, degree), fontsize=18)
+        fig2.savefig("./output/%s/%s_%s.png" % (folders[count], degree, file))
+>>>>>>> dfa7e629a9e6a588621d0e878852ba1be4133d67
         
     
 
