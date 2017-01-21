@@ -11,7 +11,7 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn import datasets, linear_model, preprocessing, pipeline
+from sklearn import datasets, linear_model, preprocessing, pipeline, metrics
 
 
 def msd_straight_forward(r):
@@ -47,8 +47,14 @@ dataDir = "E:\\Code\\pythonPractice\\MSD\\data\\"
 dataList = os.listdir(dataDir)
 dataFileCount = len(dataList)
 
+r2s = []
+regrs = []
+fits = []
+
 for file in dataList:
     filePath = dataDir + file
+    tmp = file.split(' ')
+    sampleName = tmp[0]
 
     
     df = pd.read_excel(filePath)
@@ -110,7 +116,7 @@ for file in dataList:
     msdAvgs.columns = ["Delta Time in Seconds", "Avg MSD"]
     print(msdAvgs)
     #Create Scatter Plot
-    scatterPlot = msdAvgs.plot(kind="scatter", x="Delta Time in Seconds", y="Avg MSD", title="Average MSD across %s" %filePath)
+    scatterPlot = msdAvgs.plot(kind="scatter", x="Delta Time in Seconds", y="Avg MSD", title="Average MSD across %s" %file)
     scatterPlot.set_xlabel("Delta Time in Seconds")
     scatterPlot.set_ylabel("Avg MSD")
     fig = scatterPlot.get_figure()
@@ -128,8 +134,13 @@ for file in dataList:
     #Calculate linear regression
     regr = linear_model.LinearRegression()
     fitXY = regr.fit(x,y)
+    regrs.append(regr)
+    fits.append(fitXY)
     regPlot = plt.plot(x, regr.predict(x), color='blue',linewidth=2)
     regFig = scatterPlot.get_figure()
+    #r2s.append(metrics.r2_score(y, regr.predict(x)))
+    r2 = metrics.r2_score(y, regr.predict(x))
+    regFig.text(.18, .7, "r2 fit: %s" %r2)
     regFig.savefig("./output/linRegs/Regression MSD Graph of %s.png" %file)
     
     folders = ["linRegs2", "quadRegs"]
@@ -141,7 +152,12 @@ for file in dataList:
         y_plot = model.predict(x)
         plt.scatter(x, y_plot, color="navy")
         plot = plt.plot(x, y_plot, label="AVG MSD %s Degree Reg" %degree, linewidth=2)
+        plt.xlabel("Time in Seconds")
+        plt.ylabel("Avg MSD")        
+        r2 = metrics.r2_score(y, model.predict(x))  
         fig2 = plot[0].figure
+        fig2.text(.18, .7, "r2 value: %s" %r2)
+        fig2.suptitle("AVG MSD %s %sDegree Reg" %(sampleName, degree))
         fig2.savefig("./output/%s/%s degree Reg MSD %s.png" % (folders[count], degree, file))
         
     
