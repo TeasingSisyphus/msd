@@ -11,8 +11,8 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn import datasets, linear_model, preprocessing, pipeline, metrics
-
+from scipy import stats 
+import math
 
 def msd_straight_forward(r):
     shifts = np.arange(len(r))
@@ -26,7 +26,6 @@ def msd_straight_forward(r):
     return msds
     
 def compute_msd(trajectory, t_step, coords=['x', 'y']):
-
     tau = trajectory['t'].copy()
     shifts = np.floor(tau / t_step).astype(np.int)
     msds = np.zeros(shifts.size)
@@ -41,136 +40,159 @@ def compute_msd(trajectory, t_step, coords=['x', 'y']):
     msds = pd.DataFrame({'msds': msds, 'tau': tau, 'msds_std': msds_std})
     return msds
 
+def save(x,y,sampleName,fileName,dataDir):
+    #Calculate polynomial regression
+    print("calculating regression plots")
+    x1 = x.reshape(1,len(x))
+    y1 = y.reshape(1,len(y))
+    x2 = x1[0]
+    y2 = y1[0]
+    m,b,rval,pval,stderr = stats.linregress(x2,y2)
+    plt.clf()
+    p1,r1,a1,b1,c1 = np.polyfit(x2,y2,1, full=True)
+    p2,r2,a2,b2,c2 = np.polyfit(x2,y2,2, full=True)    
+    plot1 =plt.plot(x2,y2,'o', label="AVG MSD Degree Reg", linewidth=2)
+    plt.plot(x2,np.polyval(p1,x2), 'm--')
+    plt.plot(x2, np.polyval(p2,x2), 'b:')
+    plt.xlabel("Time in Seconds")
+    plt.ylabel("Avg MSD") 
+    fig2=plot1[0].figure   
+    fig2.text(.18, .7, "r2_lin value: %s" %rval)
+    fig2.text(.18,.75, "quad residual: %s" %r2)
+    fig2.suptitle("AVG MSD %s Reg" %sampleName)
+    fig2.savefig("./output/%s degree Reg MSD.png" %  fileName)
+    print("file '%s' saved to '%s' directory " %(fileName, dataDir+'/output/'))
 
+def go(dataDir,dataList,inputsAnalysis):
+
+    print("starting analysis with %s parameters." %(inputsAnalysis))
+    minSize=inputsAnalysis[0]
+    minCount = inputsAnalysis[1]
+    msdRowLimit = inputsAnalysis[2]
+    dt = inputsAnalysis[3]
+    for fileName in dataList:
+        print("working on file %s" %fileName)
+        filePath = dataDir + fileName
+        tmp = fileName.split(' ')
+        sampleName = tmp[0]
+        df = pd.read_excel(filePath)
+        #Filter for entries that have Particle ID = 2, then draw x1 and y1 columns
+        #toPlot = df[df['Particle ID'] == 2][[' X1 (pixels)', ' Y1 (pixels)']]
+        #plot = toPlot.plot(x=" X1 (pixels)", y=" Y1 (pixels)", kind="scatter")
+        #fig = plot.get_figure()
+        #fig.savefig("particlePlot.png")
+        
+        
+        #Group Data by id
+        grouped = df[[' X1 (pixels)', ' Y1 (pixels)',' X2 (pixels)', ' Y2 (pixels)', ' Particle Size (nm)']].groupby(df['Particle ID'])
+        counts = grouped.size() #Creates Series with sizes for each group
+
+        validData = []
+        msdData = []
+        acceptedParticles = []
+        for name, group in grouped:
+           
+            if counts[name] > float(minCount) and group.iloc[0][' Particle Size (nm)'] > float(minSize):
+                #Group passes -> Do things
+                #print("Group %s is valid data" %name)
+                acceptedParticles.append(name)
+                validData.append({'id': "%s" %name, 'data': group})
+                r = group[[' X1 (pixels)', ' Y1 (pixels)']]
+                rSize = r.size/2
+                maxTime = dt*rSize
+                t = np.linspace(0,maxTime,rSize)
+                traj = pd.DataFrame({'t':t,'x':r[' X1 (pixels)'], 'y':r[' Y1 (pixels)']})
+                msds = compute_msd(traj, t_step=dt)
+                msdData.append({'id':"%s" %name, 'data':msds})
+            #else:
+                #Discarded  Data
+                #print("Group %s is INVALID data" %name)
+        #msdAvgs = pd.DataFrame(columns=['t', 'msdAvg'])
+        #for time in np.arange(0, lowestTime, dt):
+        times = []
+        avgs = []
+        print("The accepted particle id's from file %s are: %s" %(fileName, acceptedParticles))
+        #For each time interval, calculate average MSD across all particles
+        for index in range(0, msdRowLimit):
+            sum = 0.0
+            avg = 0.0
+            for point in msdData:
+                #step = time % .04
+                #print(point['data'])
+                diff = point['data']['msds'].iloc[index]
+                sum = sum + diff
+        
+            avg = sum/len(msdData)
+            time = index * dt
+            times.append(time)
+            avgs.append(avg)
+            
+        
+        #msdAvgs = pd.Series(data=avgs, index=times)
+        msdAvgs = pd.DataFrame(data=avgs, index=times, columns=["Avg MSD"])
+        msdAvgs.reset_index(inplace=True)
+        msdAvgs.columns = ["Delta Time in Seconds", "Avg MSD"]
+
+        #Format data for regression
+        msdAvgs.columns = ['a','b']
+        x = msdAvgs['a'].values
+        y = msdAvgs['b'].values
+        length = len(x)
+        msdAvgs.columns = ["Delta Time in Seconds", "Avg MSD"]
+        x = x.reshape(length,1)
+        y= y.reshape(length,1)
+        save(x,y,sampleName,fileName,dataDir)
+
+           
+  
+
+        
+
+print("starting")
 os.chdir("C:\\Users\\ashis\\Documents\\code\\msd\\")
 dataDir = "C:\\Users\\ashis\\Documents\\code\\msd\\data\\"
 dataList = os.listdir(dataDir)
 dataFileCount = len(dataList)
 
-r2s = []
-regrs = []
-fits = []
-
-for file in dataList:
-    filePath = dataDir + file
-    tmp = file.split(' ')
-    sampleName = tmp[0]
 
     
-    df = pd.read_excel(filePath)
-    #Filter for entries that have Particle ID = 2, then draw x1 and y1 columns
-    #toPlot = df[df['Particle ID'] == 2][[' X1 (pixels)', ' Y1 (pixels)']]
-    #plot = toPlot.plot(x=" X1 (pixels)", y=" Y1 (pixels)", kind="scatter")
-    #fig = plot.get_figure()
-    #fig.savefig("particlePlot.png")
-    
-    
-    #Group Data by id
-    grouped = df[[' X1 (pixels)', ' Y1 (pixels)',' X2 (pixels)', ' Y2 (pixels)', ' Particle Size (nm)']].groupby(df['Particle ID'])
-    counts = grouped.size() #Creates Series with sizes for each group
-    validData = []
-    lowestTime = 1000
-    msdRowLimit = 15
-    dt = .04
-    msdData = []
-    for name, group in grouped:
-        if counts[name] > 100 and group.iloc[0][' Particle Size (nm)'] > 50:
-            #Group passes -> Do things
-            #print("Group %s is valid data" %name)
-            validData.append({'id': "%s" %name, 'data': group})
-            r = group[[' X1 (pixels)', ' Y1 (pixels)']]
-            rSize = r.size/2
-            maxTime = dt*rSize
-            if maxTime < lowestTime:
-                lowestTime = maxTime
-            t = np.linspace(0,maxTime,rSize)
-            traj = pd.DataFrame({'t':t,'x':r[' X1 (pixels)'], 'y':r[' Y1 (pixels)']})
-            msds = compute_msd(traj, t_step=dt)
-            msdData.append({'id':"%s" %name, 'data':msds})
-        #else:
-            #Discarded  Data
-            #print("Group %s is INVALID data" %name)
-    #msdAvgs = pd.DataFrame(columns=['t', 'msdAvg'])
-    #for time in np.arange(0, lowestTime, dt):
-    times = []
-    avgs = []
-    #For each time interval, calculate average MSD across all particles
-    for index in range(0, msdRowLimit):
-        sum = 0.0
-        avg = 0.0
-        for point in msdData:
-            #step = time % .04
-            #print(point['data'])
-            diff = point['data']['msds'].iloc[index]
-            sum = sum + diff
-    
-        avg = sum/len(msdData)
-        time = index * dt
-        times.append(time)
-        avgs.append(avg)
-        print("Time: %s Avg: %s" %(time, avg))
-    
-    #msdAvgs = pd.Series(data=avgs, index=times)
-    msdAvgs = pd.DataFrame(data=avgs, index=times, columns=["Avg MSD"])
-    msdAvgs.reset_index(inplace=True)
-    msdAvgs.columns = ["Delta Time in Seconds", "Avg MSD"]
-    print(msdAvgs)
-    #Create Scatter Plot
-    scatterPlot = msdAvgs.plot(kind="scatter", x="Delta Time in Seconds", y="Avg MSD", title="Average MSD across %s" %file)
-    scatterPlot.set_xlabel("Delta Time in Seconds")
-    scatterPlot.set_ylabel("Avg MSD")
-    fig = scatterPlot.get_figure()
-    fig.savefig("./output/scatterplots/MSD Graph of %s.png" %file)
+#Command line UI
+print("There are %s input data files in the input directory" %dataFileCount)
+res = input("Do you want to continue with analysis? (Answer with yes or no)  :  ")
 
-    #Format data for regression
-    msdAvgs.columns = ['a','b']
-    x = msdAvgs['a'].values
-    y = msdAvgs['b'].values
-    length = len(x)
-    msdAvgs.columns = ["Delta Time in Seconds", "Avg MSD"]
-    x = x.reshape(length,1)
-    y= y.reshape(length,1)
-
-    #Calculate linear regression
-    regr = linear_model.LinearRegression()
-    fitXY = regr.fit(x,y)
-    regrs.append(regr)
-    fits.append(fitXY)
-    regPlot = plt.plot(x, regr.predict(x), color='blue',linewidth=2)
-    regFig = scatterPlot.get_figure()
-    #r2s.append(metrics.r2_score(y, regr.predict(x)))
-    r2 = metrics.r2_score(y, regr.predict(x))
-    regFig.text(.18, .7, "r2 fit: %s" %r2)
-    regFig.savefig("./output/linRegs/Regression MSD Graph of %s.png" %file)
+if res.lower() == "yes":
+    res2 = input("please the follwoing information (comma-separated): minimum particle size, minimum count per particle : ")
+    inputs = res2.split(",")
+    res3 = input("you have selected %s d-nm, %s counts as your minimun critera. Do you want to continue?   " %(inputs[0],inputs[1]))
+    if res3.lower() == "yes":
+        minSize = inputs[0]
+        minCount = inputs[1]
     
-    folders = ["linRegs2", "quadRegs"]
-    #Calculate polynomial regression
-    for count, degree in enumerate([1, 2]):
-        plt.clf()
-        model = pipeline.make_pipeline(preprocessing.PolynomialFeatures(degree), linear_model.Ridge())
-        model.fit(x, y)
-        y_plot = model.predict(x)
-        plt.scatter(x, y_plot, color="navy")
-<<<<<<< HEAD
-        plot = plt.plot(x, y_plot, label="AVG MSD %s Degree Reg" %degree, linewidth=2)
-        plt.xlabel("Time in Seconds")
-        plt.ylabel("Avg MSD")        
-        r2 = metrics.r2_score(y, model.predict(x))  
-        fig2 = plot[0].figure
-        fig2.text(.18, .7, "r2 value: %s" %r2)
-        fig2.suptitle("AVG MSD %s %sDegree Reg" %(sampleName, degree))
-        fig2.savefig("./output/%s/%s degree Reg MSD %s.png" % (folders[count], degree, file))
-=======
-        plt.xlabel('delta t', fontsize=10)
-        plt.ylabel('avg MSD', fontsize=10)
-        
-        plot = plt.plot(x, y_plot, linewidth=2)
-        fig2 = plot[0].figure
-        fig2.suptitle('Avg MSD of %s_%s degReg'%(file, degree), fontsize=18)
-        fig2.savefig("./output/%s/%s_%s.png" % (folders[count], degree, file))
->>>>>>> dfa7e629a9e6a588621d0e878852ba1be4133d67
-        
+        res4 = input("Analysis parameters: delta-t, total time (0.1-1 sec)")
+        input3 = res4.split(",")
+        dt= float(input3[0])
+        msdTotalTime = float(input3[1])
+        msdRowLimit = math.ceil(msdTotalTime/dt)
+        msdRowLimit = int(msdRowLimit)
+        inputsAnalysis = [ minSize, minCount,msdRowLimit, dt]
+        go(dataDir, dataList, inputsAnalysis)
+    else:
+        res4 = input("Do you want to change your inputs?")
+        if res4.lower() == "yes":
+            inputs2 = input("please the follwoing information (comma-separated): minimum particle size, minimum count per particle , total row limit  :  ")
+        else:
+            print("Thank you for using our MSDplotter")
+elif res.lower() == "justgo":
     
+    inputsAnalysis= [50,100,14,.04]
+    
+    minSize = inputsAnalysis[0]
+    minCount = inputsAnalysis[1]
+    msdRowLimit = inputsAnalysis[2]
+    dt = inputsAnalysis[3]
+    go(dataDir, dataList, inputsAnalysis)
+else:
+    print("Thank you for browising MSDplotter")            
 
 
 
