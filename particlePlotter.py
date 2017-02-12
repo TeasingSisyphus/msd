@@ -14,6 +14,50 @@ import matplotlib.pyplot as plt
 from scipy import stats 
 import math
 
+#import tkinter as tk
+from tkinter import filedialog as fd
+
+
+#def gui():
+#    global top 
+#    top = tk.Tk()
+#    L1 = tk.Label(top, text="Minimum Particle Size:").grid(row=0)
+#    # L1.pack()
+#    E1 = tk.Entry(top, bd=5)
+#    E1.grid(row=0, column=1)
+#    # E1.pack()
+#    L2 = tk.Label(top, text="Minimum Frames per Particle:").grid(row=1)
+#    # L2.pack()
+#    E2 = tk.Entry(top, bd=5)
+#    E2.grid(row=1, column=1)
+#    # E2.pack()
+#    
+#    L3 = tk.Label(top, text="Total Output Time (Sec)").grid(row=2)
+#    E3 = tk.Entry(top, bd=5)
+#    E3.grid(row=2, column=1)
+#    
+#    L4 = tk.Label(top, text="delta-T").grid(row=3)
+#    E4 = tk.Entry(top, bd=5)
+#    E4.grid(row=3, column=1)
+#
+#    B1 = tk.Button(top, text = "Analyze", command=lambda: go([E1.get(),E2.get(),E3.get(),E4.get()]))
+#    B1.grid(row=4)
+#    # B1.pack()
+#    # B2 = tk.Button(top, text = "e2", command=lambda: printer(E2))
+#    # B2.pack()
+#    B3 = tk.Button(top, text = "Cancel", command = ender)
+#    B3.grid(row=4, column=1)
+#    # B3.pack()
+#    top.mainloop()
+
+#def printer(entry):
+#    print("got to the printer " + entry.get())
+#
+#def ender():
+#    print("destroy")
+#    top.destroy()
+
+
 def msd_straight_forward(r):
     shifts = np.arange(len(r))
     msds = np.zeros(shifts.size)    
@@ -40,8 +84,8 @@ def compute_msd(trajectory, t_step, coords=['x', 'y']):
     msds = pd.DataFrame({'msds': msds, 'tau': tau, 'msds_std': msds_std})
     return msds
 
-def save(x,y,sampleName,fileName,dataDir):
-    #Calculate polynomial regression
+def save(x,y,sampleName,fileName):
+    #Calculate polynomial regression  
     print("calculating regression plots")
     x1 = x.reshape(1,len(x))
     y1 = y.reshape(1,len(y))
@@ -60,19 +104,21 @@ def save(x,y,sampleName,fileName,dataDir):
     fig2.text(.18, .7, "r2_lin value: %s" %rval)
     fig2.text(.18,.75, "quad residual: %s" %r2)
     fig2.suptitle("AVG MSD %s Reg" %sampleName)
-    fig2.savefig("./output/%s degree Reg MSD.png" %  fileName)
-    print("file '%s' saved to '%s' directory " %(fileName, dataDir+'/output/'))
+    nameFile = fileName.split('/')
+    fileTitle = nameFile[-1].split('.')
+    fig2.savefig( "./output/Reg %s MSD.png" %fileTitle[0])
+    print("file '%s' saved " %(fileTitle[0]))
 
-def go(dataDir,dataList,inputsAnalysis):
+def go(inputsAnalysis):
 
     print("starting analysis with %s parameters." %(inputsAnalysis))
     minSize=inputsAnalysis[0]
     minCount = inputsAnalysis[1]
     msdRowLimit = inputsAnalysis[2]
     dt = inputsAnalysis[3]
-    for fileName in dataList:
+    for fileName in files:
         print("working on file %s" %fileName)
-        filePath = dataDir + fileName
+        filePath = fileName
         tmp = fileName.split(' ')
         sampleName = tmp[0]
         df = pd.read_excel(filePath)
@@ -141,25 +187,28 @@ def go(dataDir,dataList,inputsAnalysis):
         msdAvgs.columns = ["Delta Time in Seconds", "Avg MSD"]
         x = x.reshape(length,1)
         y= y.reshape(length,1)
-        save(x,y,sampleName,fileName,dataDir)
+        save(x,y,sampleName,fileName)
 
            
   
 
         
 
-print("starting")
-os.chdir("C:\\Users\\ashis\\Documents\\code\\msd\\")
-dataDir = "C:\\Users\\ashis\\Documents\\code\\msd\\data\\"
-dataList = os.listdir(dataDir)
-dataFileCount = len(dataList)
+print("ARE YOU READDDY TOOOO RUMMMBBBBBLLLLEEEEEEE!!!!!!!!!!")
+print("Please select the input files")
+files = fd.askopenfilenames()
+
+#os.chdir("C:\\Users\\ashis\\Documents\\code\\msd\\")
+#dataDir = "C:\\Users\\ashis\\Documents\\code\\msd\\data\\"
+#dataList = os.listdir(dataDir)
+dataFileCount = len(files)
 
 
     
 #Command line UI
 print("There are %s input data files in the input directory" %dataFileCount)
 res = input("Do you want to continue with analysis? (Answer with yes or no)  :  ")
-
+#gui()
 if res.lower() == "yes":
     res2 = input("please the follwoing information (comma-separated): minimum particle size, minimum count per particle : ")
     inputs = res2.split(",")
@@ -167,7 +216,7 @@ if res.lower() == "yes":
     if res3.lower() == "yes":
         minSize = inputs[0]
         minCount = inputs[1]
-    
+   
         res4 = input("Analysis parameters: delta-t, total time (0.1-1 sec)")
         input3 = res4.split(",")
         dt= float(input3[0])
@@ -175,7 +224,7 @@ if res.lower() == "yes":
         msdRowLimit = math.ceil(msdTotalTime/dt)
         msdRowLimit = int(msdRowLimit)
         inputsAnalysis = [ minSize, minCount,msdRowLimit, dt]
-        go(dataDir, dataList, inputsAnalysis)
+        go(inputsAnalysis)
     else:
         res4 = input("Do you want to change your inputs?")
         if res4.lower() == "yes":
@@ -183,16 +232,14 @@ if res.lower() == "yes":
         else:
             print("Thank you for using our MSDplotter")
 elif res.lower() == "justgo":
-    
-    inputsAnalysis= [50,100,14,.04]
-    
+   
+    inputsAnalysis= [200,150,14,.04]
+   
     minSize = inputsAnalysis[0]
     minCount = inputsAnalysis[1]
     msdRowLimit = inputsAnalysis[2]
     dt = inputsAnalysis[3]
-    go(dataDir, dataList, inputsAnalysis)
+    #go(inputsAnalysis)
 else:
     print("Thank you for browising MSDplotter")            
-
-
 
