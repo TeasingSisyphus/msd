@@ -14,48 +14,48 @@ import matplotlib.pyplot as plt
 from scipy import stats 
 import math
 
-#import tkinter as tk
+import tkinter as tk
 from tkinter import filedialog as fd
 
 
-#def gui():
-#    global top 
-#    top = tk.Tk()
-#    L1 = tk.Label(top, text="Minimum Particle Size:").grid(row=0)
-#    # L1.pack()
-#    E1 = tk.Entry(top, bd=5)
-#    E1.grid(row=0, column=1)
-#    # E1.pack()
-#    L2 = tk.Label(top, text="Minimum Frames per Particle:").grid(row=1)
-#    # L2.pack()
-#    E2 = tk.Entry(top, bd=5)
-#    E2.grid(row=1, column=1)
-#    # E2.pack()
-#    
-#    L3 = tk.Label(top, text="Total Output Time (Sec)").grid(row=2)
-#    E3 = tk.Entry(top, bd=5)
-#    E3.grid(row=2, column=1)
-#    
-#    L4 = tk.Label(top, text="delta-T").grid(row=3)
-#    E4 = tk.Entry(top, bd=5)
-#    E4.grid(row=3, column=1)
-#
-#    B1 = tk.Button(top, text = "Analyze", command=lambda: go([E1.get(),E2.get(),E3.get(),E4.get()]))
-#    B1.grid(row=4)
-#    # B1.pack()
-#    # B2 = tk.Button(top, text = "e2", command=lambda: printer(E2))
-#    # B2.pack()
-#    B3 = tk.Button(top, text = "Cancel", command = ender)
-#    B3.grid(row=4, column=1)
-#    # B3.pack()
-#    top.mainloop()
+def gui():
+   global top 
+   top = tk.Tk()
+   L1 = tk.Label(top, text="Minimum Particle Size:").grid(row=0)
+   # L1.pack()
+   E1 = tk.Entry(top, bd=5)
+   E1.grid(row=0, column=1)
+   # E1.pack()
+   L2 = tk.Label(top, text="Minimum Frames per Particle:").grid(row=1)
+   # L2.pack()
+   E2 = tk.Entry(top, bd=5)
+   E2.grid(row=1, column=1)
+   # E2.pack()
+   
+   L3 = tk.Label(top, text="Total Output Time (Sec)").grid(row=2)
+   E3 = tk.Entry(top, bd=5)
+   E3.grid(row=2, column=1)
+   
+   L4 = tk.Label(top, text="delta-T").grid(row=3)
+   E4 = tk.Entry(top, bd=5)
+   E4.grid(row=3, column=1)
 
-#def printer(entry):
-#    print("got to the printer " + entry.get())
-#
-#def ender():
-#    print("destroy")
-#    top.destroy()
+   B1 = tk.Button(top, text = "Analyze", command=lambda: go([E1.get(),E2.get(),E3.get(),E4.get()]))
+   B1.grid(row=4)
+   # B1.pack()
+   # B2 = tk.Button(top, text = "e2", command=lambda: printer(E2))
+   # B2.pack()
+   B3 = tk.Button(top, text = "Cancel", command = ender)
+   B3.grid(row=4, column=1)
+   # B3.pack()
+   top.mainloop()
+
+def printer(entry):
+   print("got to the printer " + entry.get())
+
+def ender():
+   print("destroy")
+   top.destroy()
 
 
 def msd_straight_forward(r):
@@ -110,12 +110,13 @@ def save(x,y,sampleName,fileName):
     print("file '%s' saved " %(fileTitle[0]))
 
 def go(inputsAnalysis):
-
+    top.quit()
     print("starting analysis with %s parameters." %(inputsAnalysis))
     minSize=inputsAnalysis[0]
     minCount = inputsAnalysis[1]
-    msdRowLimit = inputsAnalysis[2]
-    dt = inputsAnalysis[3]
+    msdTimeLimit = float(inputsAnalysis[2])
+    dt = float(inputsAnalysis[3])
+    msdRowLimit = math.ceil(msdTimeLimit/dt)
     for fileName in files:
         print("working on file %s" %fileName)
         filePath = fileName
@@ -144,9 +145,9 @@ def go(inputsAnalysis):
                 acceptedParticles.append(name)
                 validData.append({'id': "%s" %name, 'data': group})
                 r = group[[' X1 (pixels)', ' Y1 (pixels)']]
-                rSize = r.size/2
-                maxTime = dt*rSize
-                t = np.linspace(0,maxTime,rSize)
+                
+                maxTime = dt*counts[name]
+                t = np.linspace(0,maxTime,counts[name])
                 traj = pd.DataFrame({'t':t,'x':r[' X1 (pixels)'], 'y':r[' Y1 (pixels)']})
                 msds = compute_msd(traj, t_step=dt)
                 msdData.append({'id':"%s" %name, 'data':msds})
@@ -188,6 +189,7 @@ def go(inputsAnalysis):
         x = x.reshape(length,1)
         y= y.reshape(length,1)
         save(x,y,sampleName,fileName)
+    print("Analysis complete")
 
            
   
@@ -208,38 +210,38 @@ dataFileCount = len(files)
 #Command line UI
 print("There are %s input data files in the input directory" %dataFileCount)
 res = input("Do you want to continue with analysis? (Answer with yes or no)  :  ")
-#gui()
-if res.lower() == "yes":
-    res2 = input("please the follwoing information (comma-separated): minimum particle size, minimum count per particle : ")
-    inputs = res2.split(",")
-    res3 = input("you have selected %s d-nm, %s counts as your minimun critera. Do you want to continue?   " %(inputs[0],inputs[1]))
-    if res3.lower() == "yes":
-        minSize = inputs[0]
-        minCount = inputs[1]
+gui()
+# if res.lower() == "yes":
+#     res2 = input("please the follwoing information (comma-separated): minimum particle size, minimum count per particle : ")
+#     inputs = res2.split(",")
+#     res3 = input("you have selected %s d-nm, %s counts as your minimun critera. Do you want to continue?   " %(inputs[0],inputs[1]))
+#     if res3.lower() == "yes":
+#         minSize = inputs[0]
+#         minCount = inputs[1]
    
-        res4 = input("Analysis parameters: delta-t, total time (0.1-1 sec)")
-        input3 = res4.split(",")
-        dt= float(input3[0])
-        msdTotalTime = float(input3[1])
-        msdRowLimit = math.ceil(msdTotalTime/dt)
-        msdRowLimit = int(msdRowLimit)
-        inputsAnalysis = [ minSize, minCount,msdRowLimit, dt]
-        go(inputsAnalysis)
-    else:
-        res4 = input("Do you want to change your inputs?")
-        if res4.lower() == "yes":
-            inputs2 = input("please the follwoing information (comma-separated): minimum particle size, minimum count per particle , total row limit  :  ")
-        else:
-            print("Thank you for using our MSDplotter")
-elif res.lower() == "justgo":
+#         res4 = input("Analysis parameters: delta-t, total time (0.1-1 sec)")
+#         input3 = res4.split(",")
+#         dt= float(input3[0])
+#         msdTotalTime = float(input3[1])
+#         msdRowLimit = math.ceil(msdTotalTime/dt)
+#         msdRowLimit = int(msdRowLimit)
+#         inputsAnalysis = [ minSize, minCount,msdRowLimit, dt]
+#         go(inputsAnalysis)
+#     else:
+#         res4 = input("Do you want to change your inputs?")
+#         if res4.lower() == "yes":
+#             inputs2 = input("please the follwoing information (comma-separated): minimum particle size, minimum count per particle , total row limit  :  ")
+#         else:
+#             print("Thank you for using our MSDplotter")
+# elif res.lower() == "justgo":
    
-    inputsAnalysis= [200,150,14,.04]
+#     inputsAnalysis= [200,150,14,.04]
    
-    minSize = inputsAnalysis[0]
-    minCount = inputsAnalysis[1]
-    msdRowLimit = inputsAnalysis[2]
-    dt = inputsAnalysis[3]
-    #go(inputsAnalysis)
-else:
-    print("Thank you for browising MSDplotter")            
+#     minSize = inputsAnalysis[0]
+#     minCount = inputsAnalysis[1]
+#     msdRowLimit = inputsAnalysis[2]
+#     dt = inputsAnalysis[3]
+#     #go(inputsAnalysis)
+# else:
+#     print("Thank you for browising MSDplotter")            
 
