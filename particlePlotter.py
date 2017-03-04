@@ -19,8 +19,9 @@ from tkinter import filedialog as fd
 
 
 def gui():
-   global top 
+   global top
    top = tk.Tk()
+   top.title('Root Dialog')
    L1 = tk.Label(top, text="Minimum Particle Size:").grid(row=0)
    # L1.pack()
    E1 = tk.Entry(top, bd=5)
@@ -47,7 +48,9 @@ def gui():
    # B2.pack()
    B3 = tk.Button(top, text = "Cancel", command = ender)
    B3.grid(row=4, column=1)
+
    # B3.pack()
+   top.lift()
    top.mainloop()
 
 def printer(entry):
@@ -55,7 +58,8 @@ def printer(entry):
 
 def ender():
    print("destroy")
-   top.destroy()
+   top.quit()
+   root.quit()
 
 
 def msd_straight_forward(r):
@@ -110,7 +114,8 @@ def save(x,y,sampleName,fileName):
     print("file '%s' saved " %(fileTitle[0]))
 
 def go(inputsAnalysis):
-    top.quit()
+    top.destroy()
+    root.quit()
     print("starting analysis with %s parameters." %(inputsAnalysis))
     minSize=inputsAnalysis[0]
     minCount = inputsAnalysis[1]
@@ -196,9 +201,13 @@ def go(inputsAnalysis):
 
         
 
+
 print("ARE YOU READDDY TOOOO RUMMMBBBBBLLLLEEEEEEE!!!!!!!!!!")
 print("Please select the input files")
-files = fd.askopenfilenames()
+global root
+root = tk.Tk()
+files = fd.askopenfilenames(parent=root)
+root.withdraw()
 
 #os.chdir("C:\\Users\\ashis\\Documents\\code\\msd\\")
 #dataDir = "C:\\Users\\ashis\\Documents\\code\\msd\\data\\"
@@ -209,7 +218,7 @@ dataFileCount = len(files)
     
 #Command line UI
 print("There are %s input data files in the input directory" %dataFileCount)
-res = input("Do you want to continue with analysis? (Answer with yes or no)  :  ")
+#res = input("Do you want to continue with analysis? (Answer with yes or no)  :  ")
 gui()
 # if res.lower() == "yes":
 #     res2 = input("please the follwoing information (comma-separated): minimum particle size, minimum count per particle : ")
