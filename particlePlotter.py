@@ -1,12 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-This Script reads the excel file: humanValues.xlsx
-plots it, using pandas, then saves the plot in 
-a png file using matplotlib.pyplot
-"""
-
-
-
 import os
 import numpy as np
 import pandas as pd
